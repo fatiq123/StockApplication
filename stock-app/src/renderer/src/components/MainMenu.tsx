@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Space, Typography, Modal, InputNumber, message } from 'antd';
-import appleIcon from '../assets/apple.png';
-import potatoIcon from '../assets/potato.png';
+import appleIcon from '../assets/apple.jpg';
+import potatoIcon from '../assets/potatoes.jpg';
 import StorageForm from './StorageForm';
 // import StorageList from './StorageList';
 import { useStorage } from '../context/StorageContext';
@@ -47,7 +47,7 @@ const MainMenu: React.FC = () => {
           background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
         }}>
         <Title className="title">
-          Cold Storage Management System
+          Welcome to Stock App
         </Title>
         
         <Modal
@@ -100,7 +100,17 @@ const MainMenu: React.FC = () => {
             borderColor: '#c0392b'
           }}
         >
-          <img src={appleIcon} alt="Apple Storage" />
+          {/* <img src={appleIcon} alt="Apple Storage" /> */}
+          <img 
+            src={appleIcon} 
+            alt="Apple Storage" 
+            style={{
+              width: '100px',
+              height: '100px',
+              objectFit: 'contain',
+              marginBottom: '8px'
+            }}
+          />
           <span>Apple Storage</span>
         </Button>
         <Button 
@@ -120,7 +130,17 @@ const MainMenu: React.FC = () => {
             borderColor: '#d35400'
           }}
         >
-          <img src={potatoIcon} alt="Potato Storage" />
+          {/* <img src={potatoIcon} alt="Potato Storage" /> */}
+          <img 
+            src={potatoIcon} 
+            alt="Potato Storage" 
+            style={{
+              width: '100px',
+              height: '100px',
+              objectFit: 'contain',
+              marginBottom: '8px'
+            }}
+          />
           <span>Potato Storage</span>
         </Button>
       </div>
