@@ -1,3 +1,14 @@
+export interface WithdrawalRecord {
+  id: string;
+  customerId: string;
+  customerName: string;
+  storageType: 'apple' | 'potato';
+  quantity: number;
+  withdrawalDate: Date;
+  billAmount: number;
+  isPaid: boolean;
+}
+
 export interface BaseCustomerData {
   id: string;
   firstName: string;
@@ -11,6 +22,8 @@ export interface BaseCustomerData {
   billAmount?: number;
   billDetails?: string;
   status: 'active' | 'completed';
+  truckNumber?: string;
+  withdrawals?: WithdrawalRecord[];
 }
 
 export interface StorageSettings {

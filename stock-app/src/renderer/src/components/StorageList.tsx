@@ -1,170 +1,36 @@
-// import React from 'react';
-// import { Table, Button, Modal, Typography, Space } from 'antd';
-// import { useStorage } from '../context/StorageContext';
-// import dayjs from 'dayjs';
-// import { calculateAppleBill, calculatePotatoBill } from '../utils/billing';
-
-// const { Text } = Typography;
-
-// interface StorageListProps {
-//   onClose: () => void;
-// }
-
-// const StorageList: React.FC<StorageListProps> = ({ onClose }) => {
-//   const { storageData, settings, updateStorageData } = useStorage();
-
-//   const handleComplete = (record: any) => {
-//     Modal.confirm({
-//       title: 'Complete Storage',
-//       content: 'Are you sure you want to complete this storage? This will calculate the final bill.',
-//       onOk: () => {
-//         const endDate = new Date();
-//         let billResult;
-
-//         if (record.type === 'apple') {
-//           billResult = calculateAppleBill(
-//             record.quantity,
-//             settings.appleRate,
-//             record.startDate,
-//             endDate
-//           );
-//         } else {
-//           billResult = calculatePotatoBill(
-//             record.quantity,
-//             settings.potatoRate,
-//             record.startDate
-//           );
-//         }
-
-//         const updatedRecord = {
-//           ...record,
-//           status: 'completed',
-//           endDate,
-//           billAmount: billResult.totalAmount,
-//           billDetails: billResult.details,
-//         };
-
-//         updateStorageData(record.id, updatedRecord);
-
-//         Modal.info({
-//           title: 'Bill Details',
-//           content: (
-//             <div>
-//               <Text>Total Amount: PKR {billResult.totalAmount}</Text>
-//               <pre>{billResult.details}</pre>
-//             </div>
-//           ),
-//           width: 600,
-//         });
-//       },
-//     });
-//   };
-
-//   const columns = [
-//     {
-//       title: 'Name',
-//       render: (record: any) => `${record.firstName} ${record.lastName}`,
-//     },
-//     {
-//       title: 'CNIC',
-//       dataIndex: 'cnic',
-//     },
-//     {
-//       title: 'Type',
-//       dataIndex: 'type',
-//       render: (text: string) => text.charAt(0).toUpperCase() + text.slice(1),
-//     },
-//     {
-//       title: 'Quantity',
-//       dataIndex: 'quantity',
-//       render: (quantity: number, record: any) => 
-//         `${quantity} ${record.type === 'apple' ? 'crates' : 'sacks'}`,
-//     },
-//     {
-//       title: 'Start Date',
-//       dataIndex: 'startDate',
-//       render: (date: Date) => dayjs(date).format('YYYY-MM-DD'),
-//     },
-//     {
-//       title: 'Status',
-//       dataIndex: 'status',
-//       render: (text: string) => text.charAt(0).toUpperCase() + text.slice(1),
-//     },
-//     {
-//       title: 'Actions',
-//       render: (record: any) => (
-//         <Space>
-//           {record.status === 'active' && (
-//             <Button onClick={() => handleComplete(record)}>
-//               Complete & Generate Bill
-//             </Button>
-//           )}
-//           {record.status === 'completed' && (
-//             <Button onClick={() => {
-//               Modal.info({
-//                 title: 'Bill Details',
-//                 content: (
-//                   <div>
-//                     <Text>Total Amount: PKR {record.billAmount}</Text>
-//                     <pre>{record.billDetails}</pre>
-//                   </div>
-//                 ),
-//                 width: 600,
-//               });
-//             }}>
-//               View Bill
-//             </Button>
-//           )}
-//         </Space>
-//       ),
-//     },
-//   ];
-
-//   return (
-//     <div style={{ background: '#fff', borderRadius: '8px', padding: '16px' }}>
-//       <Table 
-//         pagination={{ 
-//           pageSize: 10,
-//           position: ['bottomRight']
-//         }} 
-//         columns={columns} 
-//         dataSource={storageData}
-//         rowKey="id"
-//       />
-//     </div>
-//   );
-// };
-
-// export default StorageList;
-
-
-
-
-
-
-
-
-
-// StorageList.tsx
 import React, { useState } from 'react';
-import { Table, Button, Modal, InputNumber, message, Form } from 'antd';
+import { Table, Button, Modal, InputNumber, message, Form, Radio, Space } from 'antd';
 import { useStorage } from '../context/StorageContext';
+import { CustomerData } from '../types/storage';
 import dayjs from 'dayjs';
+
+interface WithdrawModalState {
+  visible: boolean;
+  customer: CustomerData | null;
+}
 
 const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { storageEntries, withdrawStorage, generateBillPDF, exportToCSV } = useStorage();
-  const [withdrawModal, setWithdrawModal] = useState<{ visible: boolean; customer: any }>({
+  const [withdrawModal, setWithdrawModal] = useState<WithdrawModalState>({
     visible: false,
     customer: null
   });
 
-  const handleWithdraw = (values: { quantity: number }) => {
+  const handleWithdraw = (values: { quantity: number; isPaid: boolean }) => {
     try {
+      if (!withdrawModal.customer) return;
+
       const { remainingQuantity, billAmount } = withdrawStorage(
         withdrawModal.customer.id,
-        values.quantity
+        values.quantity,
+        values.isPaid
       );
-      message.success(`Withdrawal successful. Bill amount: ${billAmount}`);
+
+      message.success(
+        `Withdrawal successful. Remaining quantity: ${remainingQuantity} ${
+          withdrawModal.customer.type === 'apple' ? 'crates' : 'sacks'
+        }, Bill amount: PKR ${billAmount}`
+      );
       setWithdrawModal({ visible: false, customer: null });
     } catch (error: any) {
       message.error(error.message);
@@ -174,24 +40,48 @@ const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const columns = [
     {
       title: 'Name',
-      render: (record: any) => `${record.firstName} ${record.lastName}`
+      render: (record: CustomerData) => `${record.firstName} ${record.lastName}`
     },
-    { title: 'Type', dataIndex: 'type' },
-    { title: 'Quantity', dataIndex: 'quantity' },
-    { title: 'Start Date', render: (record: any) => dayjs(record.startDate).format('YYYY-MM-DD') },
-    { title: 'Status', dataIndex: 'status' },
+    {
+      title: 'Type',
+      dataIndex: 'type',
+      render: (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+    },
+    {
+      title: 'Quantity',
+      dataIndex: 'quantity',
+      render: (quantity: number, record: CustomerData) =>
+        `${quantity} ${record.type === 'apple' ? 'crates' : 'sacks'}`
+    },
+    {
+      title: 'Start Date',
+      dataIndex: 'startDate',
+      render: (date: Date) => dayjs(date).format('YYYY-MM-DD')
+    },
+    {
+      title: 'Truck/Container',
+      dataIndex: 'truckNumber',
+      render: (text: string, record: CustomerData) =>
+        record.type === 'apple' ? text || 'N/A' : '-'
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
+    },
     {
       title: 'Actions',
-      render: (record: any) => (
-        <>
-          <Button onClick={() => generateBillPDF(record)}>Generate Bill</Button>
-          <Button 
+      render: (record: CustomerData) => (
+        <Space>
+          <Button onClick={() => generateBillPDF(record)}>View Bill</Button>
+          <Button
+            type="primary"
             onClick={() => setWithdrawModal({ visible: true, customer: record })}
             disabled={record.status === 'completed'}
           >
             Withdraw
           </Button>
-        </>
+        </Space>
       )
     }
   ];
@@ -199,41 +89,79 @@ const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <>
       <div style={{ marginBottom: 16 }}>
-        <Button onClick={() => exportToCSV('apple')} style={{ marginRight: 8 }}>
-          Export Apple Records
-        </Button>
-        <Button onClick={() => exportToCSV('potato')}>
-          Export Potato Records
-        </Button>
+        <Space>
+          <Button onClick={() => exportToCSV('apple')}>
+            Export Apple Records
+          </Button>
+          <Button onClick={() => exportToCSV('potato')}>
+            Export Potato Records
+          </Button>
+        </Space>
       </div>
 
-      <Table dataSource={storageEntries} columns={columns} rowKey="id" />
+      <Table
+        dataSource={storageEntries}
+        columns={columns}
+        rowKey="id"
+        pagination={{ pageSize: 10 }}
+      />
 
       <Modal
-        title="Withdraw Storage"
+        title={`Withdraw Storage - ${withdrawModal.customer ? 
+          `${withdrawModal.customer.firstName} ${withdrawModal.customer.lastName}` : ''}`}
         open={withdrawModal.visible}
         onCancel={() => setWithdrawModal({ visible: false, customer: null })}
         footer={null}
       >
-        <Form onFinish={handleWithdraw}>
+        <Form onFinish={handleWithdraw} layout="vertical">
           <Form.Item
             name="quantity"
             label="Quantity to Withdraw"
             rules={[
-              { required: true },
+              { required: true, message: 'Please enter withdrawal quantity' },
               {
-                validator: (_, value) =>
-                  value <= withdrawModal.customer?.quantity
-                    ? Promise.resolve()
-                    : Promise.reject('Withdrawal quantity exceeds stored quantity')
+                validator: async (_, value) => {
+                  if (!value || value <= 0) {
+                    throw new Error('Withdrawal quantity must be positive');
+                  }
+                  if (!withdrawModal.customer) return;
+                  if (value > withdrawModal.customer.quantity) {
+                    throw new Error('Withdrawal quantity exceeds stored quantity');
+                  }
+                }
               }
             ]}
           >
-            <InputNumber min={1} max={withdrawModal.customer?.quantity} />
+            <InputNumber
+              min={1}
+              max={withdrawModal.customer?.quantity}
+              style={{ width: '100%' }}
+              placeholder={`Enter quantity (max: ${withdrawModal.customer?.quantity || 0})`}
+            />
           </Form.Item>
-          <Button type="primary" htmlType="submit">
-            Confirm Withdrawal
-          </Button>
+
+          <Form.Item
+            name="isPaid"
+            label="Payment Status"
+            initialValue={false}
+            rules={[{ required: true, message: 'Please select payment status' }]}
+          >
+            <Radio.Group>
+              <Radio value={true}>Paid</Radio>
+              <Radio value={false}>Pending</Radio>
+            </Radio.Group>
+          </Form.Item>
+
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Confirm Withdrawal
+              </Button>
+              <Button onClick={() => setWithdrawModal({ visible: false, customer: null })}>
+                Cancel
+              </Button>
+            </Space>
+          </Form.Item>
         </Form>
       </Modal>
     </>

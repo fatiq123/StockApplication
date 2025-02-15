@@ -37,7 +37,9 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
             id: Date.now().toString(),
             ...values,
             startDate: values.startDate.toDate(),
-            status: 'active'
+            status: 'active',
+            truckNumber: values.truckNumber,
+            withdrawals: []
         };
         addStorageEntry({
             ...customerData,
@@ -183,6 +185,16 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                         rules={[{ required: true, message: 'Please input quantity!' }]}
                     >
                         <InputNumber min={1} style={{ width: '100%' }} />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="truckNumber"
+                        label="Truck Number"
+                        rules={[
+                            { required: type === 'apple', message: 'Please input truck number for apple storage!' }
+                        ]}
+                    >
+                        <Input placeholder="Enter truck/container number" />
                     </Form.Item>
 
                     <Form.Item

@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { CustomerData } from '../types/storage';
+import { CustomerData, WithdrawalRecord } from '../types/storage';
 import dayjs from 'dayjs';
 import { jsPDF } from 'jspdf';
 
 interface StorageContextType {
   storageEntries: CustomerData[];
+  completedEntries: CustomerData[];
+  withdrawalRecords: WithdrawalRecord[];
   settings: {
     appleRate: number;
     potatoRate: number;
@@ -12,7 +14,7 @@ interface StorageContextType {
   addStorageEntry: (entry: CustomerData) => void;
   updateSettings: (newSettings: { appleRate?: number; potatoRate?: number }) => void;
   exportToCSV: (type: 'apple' | 'potato') => void;
-  withdrawStorage: (id: string, quantity: number) => { remainingQuantity: number; billAmount: number };
+  withdrawStorage: (id: string, quantity: number, isPaid: boolean) => { remainingQuantity: number; billAmount: number };
   generateBillPDF: (customer: CustomerData) => void;
 }
 
@@ -24,6 +26,16 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [completedEntries, setCompletedEntries] = useState<CustomerData[]>(() => {
+    const saved = localStorage.getItem('completedEntries');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [withdrawalRecords, setWithdrawalRecords] = useState<WithdrawalRecord[]>(() => {
+    const saved = localStorage.getItem('withdrawalRecords');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem('storageSettings');
     return saved ? JSON.parse(saved) : { appleRate: 0, potatoRate: 0 };
@@ -32,6 +44,14 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem('storageEntries', JSON.stringify(storageEntries));
   }, [storageEntries]);
+
+  useEffect(() => {
+    localStorage.setItem('completedEntries', JSON.stringify(completedEntries));
+  }, [completedEntries]);
+
+  useEffect(() => {
+    localStorage.setItem('withdrawalRecords', JSON.stringify(withdrawalRecords));
+  }, [withdrawalRecords]);
 
   useEffect(() => {
     localStorage.setItem('storageSettings', JSON.stringify(settings));
@@ -94,32 +114,62 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doc.text(`CNIC: ${customer.cnic}`, 20, 50);
     doc.text(`Phone: ${customer.phoneNumber}`, 20, 60);
     doc.text(`Storage Type: ${customer.type}`, 20, 70);
-    doc.text(`Quantity: ${customer.quantity}`, 20, 80);
-    doc.text(`Rate: ${customer.type === 'apple' ? settings.appleRate : settings.potatoRate}`, 20, 90);
-    doc.text(`Total Amount: ${calculateBill(customer)}`, 20, 100);
+    if (customer.type === 'apple' && customer.truckNumber) {
+      doc.text(`Truck Number: ${customer.truckNumber}`, 20, 80);
+    }
+    doc.text(`Current Quantity: ${customer.quantity}`, 20, 90);
+    doc.text(`Rate: ${customer.type === 'apple' ? settings.appleRate : settings.potatoRate}`, 20, 100);
+    doc.text(`Total Amount: ${calculateBill(customer)}`, 20, 110);
+
+    if (customer.withdrawals && customer.withdrawals.length > 0) {
+      doc.text('Withdrawal History:', 20, 130);
+      customer.withdrawals.forEach((withdrawal, index) => {
+        const y = 140 + (index * 10);
+        doc.text(`${dayjs(withdrawal.withdrawalDate).format('YYYY-MM-DD')}: ${withdrawal.quantity} units - ${withdrawal.isPaid ? 'Paid' : 'Pending'} - PKR ${withdrawal.billAmount}`, 30, y);
+      });
+    }
 
     doc.save(`${customer.firstName}_${customer.lastName}_bill.pdf`);
   };
 
-  const withdrawStorage = (id: string, quantity: number) => {
+  const withdrawStorage = (id: string, quantity: number, isPaid: boolean) => {
     const customerIndex = storageEntries.findIndex(entry => entry.id === id);
     if (customerIndex === -1) throw new Error('Customer not found');
 
     const customer = storageEntries[customerIndex];
     if (quantity > customer.quantity) throw new Error('Withdrawal quantity exceeds stored quantity');
+    if (quantity <= 0) throw new Error('Withdrawal quantity must be positive');
 
     const billAmount = calculateBill(customer, quantity);
     const remainingQuantity = customer.quantity - quantity;
 
-    setStorageEntries(entries => {
-      const updated = [...entries];
-      updated[customerIndex] = {
-        ...customer,
-        quantity: remainingQuantity,
-        status: remainingQuantity === 0 ? 'completed' : 'active'
-      };
-      return updated;
-    });
+    const withdrawalRecord: WithdrawalRecord = {
+      id: Date.now().toString(),
+      customerId: customer.id,
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      storageType: customer.type,
+      quantity,
+      withdrawalDate: new Date(),
+      billAmount,
+      isPaid
+    };
+
+    setWithdrawalRecords(prev => [...prev, withdrawalRecord]);
+
+    if (remainingQuantity === 0) {
+      setCompletedEntries(prev => [...prev, { ...customer, status: 'completed' }]);
+      setStorageEntries(entries => entries.filter(e => e.id !== id));
+    } else {
+      setStorageEntries(entries => {
+        const updated = [...entries];
+        updated[customerIndex] = {
+          ...customer,
+          quantity: remainingQuantity,
+          withdrawals: [...(customer.withdrawals || []), withdrawalRecord]
+        };
+        return updated;
+      });
+    }
 
     return { remainingQuantity, billAmount };
   };
@@ -127,6 +177,8 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
   return (
     <StorageContext.Provider value={{
       storageEntries,
+      completedEntries,
+      withdrawalRecords,
       settings,
       addStorageEntry: (entry) => setStorageEntries(prev => [...prev, entry]),
       updateSettings: (newSettings) => setSettings(prev => ({ ...prev, ...newSettings })),
