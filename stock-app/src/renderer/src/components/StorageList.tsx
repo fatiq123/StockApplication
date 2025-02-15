@@ -1,20 +1,41 @@
 import React, { useState } from 'react';
-import { Table, Button, Modal, InputNumber, message, Form, Radio, Space } from 'antd';
+import EditStorageModal from './EditStorageModal';
+import { Table, Button, Modal, InputNumber, message, Form, Radio, Space, Typography } from 'antd';
 import { useStorage } from '../context/StorageContext';
 import { CustomerData } from '../types/storage';
 import dayjs from 'dayjs';
+
+const { Title } = Typography;
 
 interface WithdrawModalState {
   visible: boolean;
   customer: CustomerData | null;
 }
 
-const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const { storageEntries, withdrawStorage, generateBillPDF, exportToCSV } = useStorage();
+interface StorageListProps {
+  type: 'apple' | 'potato';
+  onClose: () => void;
+  showCompleted?: boolean;
+}
+
+const StorageList: React.FC<StorageListProps> = ({ type, onClose, showCompleted = false }) => {
+  const { storageEntries, completedEntries, withdrawStorage, generateBillPDF, exportToCSV, deleteStorageEntry, updateStorageEntry } = useStorage();
   const [withdrawModal, setWithdrawModal] = useState<WithdrawModalState>({
     visible: false,
     customer: null
   });
+  const [editModal, setEditModal] = useState<{ visible: boolean; customer: CustomerData | null }>({
+    visible: false,
+    customer: null
+  });
+
+  const handleUpdate = (id: string, updatedData: Partial<CustomerData>) => {
+    updateStorageEntry(id, updatedData);
+    message.success('Storage entry updated successfully');
+  };
+
+  const entries = showCompleted ? completedEntries : storageEntries;
+  const filteredEntries = entries.filter(entry => entry.type === type);
 
   const handleWithdraw = (values: { quantity: number; isPaid: boolean }) => {
     try {
@@ -43,27 +64,19 @@ const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       render: (record: CustomerData) => `${record.firstName} ${record.lastName}`
     },
     {
-      title: 'Type',
-      dataIndex: 'type',
-      render: (text: string) => text.charAt(0).toUpperCase() + text.slice(1)
-    },
-    {
       title: 'Quantity',
       dataIndex: 'quantity',
-      render: (quantity: number, record: CustomerData) =>
-        `${quantity} ${record.type === 'apple' ? 'crates' : 'sacks'}`
+      render: (quantity: number) => `${quantity} ${type === 'apple' ? 'crates' : 'sacks'}`
     },
     {
       title: 'Start Date',
       dataIndex: 'startDate',
       render: (date: Date) => dayjs(date).format('YYYY-MM-DD')
     },
-    {
+    ...(type === 'apple' ? [{
       title: 'Truck/Container',
-      dataIndex: 'truckNumber',
-      render: (text: string, record: CustomerData) =>
-        record.type === 'apple' ? text || 'N/A' : '-'
-    },
+      dataIndex: 'truckNumber'
+    }] : []),
     {
       title: 'Status',
       dataIndex: 'status',
@@ -74,13 +87,40 @@ const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       render: (record: CustomerData) => (
         <Space>
           <Button onClick={() => generateBillPDF(record)}>View Bill</Button>
-          <Button
-            type="primary"
-            onClick={() => setWithdrawModal({ visible: true, customer: record })}
-            disabled={record.status === 'completed'}
-          >
-            Withdraw
-          </Button>
+          {!showCompleted && (
+            <>
+              <Button
+                type="primary"
+                onClick={() => setWithdrawModal({ visible: true, customer: record })}
+              >
+                Withdraw
+              </Button>
+              <Button
+                type="primary"
+                style={{ backgroundColor: '#52c41a' }}
+                onClick={() => setEditModal({ visible: true, customer: record })}
+              >
+                Update
+              </Button>
+              <Button
+                danger
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'Delete Storage Entry',
+                    content: 'Are you sure you want to delete this storage entry?',
+                    okText: 'Yes',
+                    cancelText: 'No',
+                    onOk: () => {
+                      deleteStorageEntry(record.id);
+                      message.success('Storage entry deleted successfully');
+                    }
+                  });
+                }}
+              >
+                Delete
+              </Button>
+            </>
+          )}
         </Space>
       )
     }
@@ -89,18 +129,18 @@ const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   return (
     <>
       <div style={{ marginBottom: 16 }}>
-        <Space>
-          <Button onClick={() => exportToCSV('apple')}>
-            Export Apple Records
+        <Space style={{ marginBottom: 16 }}>
+          <Button onClick={() => exportToCSV(type)}>
+            Export {type.charAt(0).toUpperCase() + type.slice(1)} Records
           </Button>
-          <Button onClick={() => exportToCSV('potato')}>
-            Export Potato Records
-          </Button>
+          <Button onClick={onClose}>Close</Button>
         </Space>
       </div>
 
+      <Title level={4}>{showCompleted ? 'Completed' : 'Active'} {type.charAt(0).toUpperCase() + type.slice(1)} Storage Records</Title>
+
       <Table
-        dataSource={storageEntries}
+        dataSource={filteredEntries}
         columns={columns}
         rowKey="id"
         pagination={{ pageSize: 10 }}
@@ -164,6 +204,13 @@ const StorageList: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </Form.Item>
         </Form>
       </Modal>
+      
+      <EditStorageModal
+        visible={editModal.visible}
+        customer={editModal.customer}
+        onCancel={() => setEditModal({ visible: false, customer: null })}
+        onUpdate={handleUpdate}
+      />
     </>
   );
 };

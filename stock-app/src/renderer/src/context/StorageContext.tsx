@@ -16,6 +16,8 @@ interface StorageContextType {
   exportToCSV: (type: 'apple' | 'potato') => void;
   withdrawStorage: (id: string, quantity: number, isPaid: boolean) => { remainingQuantity: number; billAmount: number };
   generateBillPDF: (customer: CustomerData) => void;
+  deleteStorageEntry: (id: string) => void;
+  updateStorageEntry: (id: string, updatedData: Partial<CustomerData>) => void;
 }
 
 const StorageContext = createContext<StorageContextType | undefined>(undefined);
@@ -174,6 +176,20 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { remainingQuantity, billAmount };
   };
 
+  const deleteStorageEntry = (id: string) => {
+    setStorageEntries(entries => entries.filter(entry => entry.id !== id));
+  };
+
+  const updateStorageEntry = <T extends CustomerData>(id: string, updatedData: Partial<T>) => {
+    setStorageEntries(entries => 
+      entries.map(entry => 
+        entry.id === id 
+          ? { ...entry, ...updatedData }
+          : entry
+      )
+    );
+  };
+
   return (
     <StorageContext.Provider value={{
       storageEntries,
@@ -184,7 +200,9 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
       updateSettings: (newSettings) => setSettings(prev => ({ ...prev, ...newSettings })),
       exportToCSV,
       withdrawStorage,
-      generateBillPDF
+      generateBillPDF,
+      deleteStorageEntry,
+      updateStorageEntry
     }}>
       {children}
     </StorageContext.Provider>

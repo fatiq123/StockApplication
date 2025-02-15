@@ -40,4 +40,8 @@ export interface PotatoStorage extends BaseCustomerData {
 }
 
 export type StorageData = AppleStorage | PotatoStorage;
-export type CustomerData = StorageData;
+export type CustomerData = StorageData & {
+  id: string;
+  status: 'active' | 'completed';
+  withdrawals?: WithdrawalRecord[];
+};

@@ -7,6 +7,7 @@ interface StorageContextType {
   storageData: StorageData[];
   addStorageEntry: (entry: StorageData) => void;
   updateStorageData: (id: string, data: StorageData) => void;
+  deleteStorageEntry: (id: string) => void;
 }
 
 const StorageContext = createContext<StorageContextType | undefined>(undefined);
@@ -50,8 +51,21 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem('storageData', JSON.stringify(newStorageData));
   };
 
+  const deleteStorageEntry = (id: string) => {
+    const newStorageData = storageData.filter(item => item.id !== id);
+    setStorageData(newStorageData);
+    localStorage.setItem('storageData', JSON.stringify(newStorageData));
+  };
+
   return (
-    <StorageContext.Provider value={{ settings, updateSettings, storageData, addStorageEntry, updateStorageData }}>
+    <StorageContext.Provider value={{ 
+      settings, 
+      updateSettings, 
+      storageData, 
+      addStorageEntry, 
+      updateStorageData, 
+      deleteStorageEntry 
+    }}>
       {children}
     </StorageContext.Provider>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Table, Button, Modal, Typography } from 'antd';
+import { Table, Button, Modal, Typography, Space } from 'antd';
 import { useStorage } from '../context/StorageContext';
 import dayjs from 'dayjs';
 import { calculateAppleBill, calculatePotatoBill } from '../utils/billing';
@@ -11,7 +11,7 @@ interface StorageListProps {
 }
 
 const StorageList: React.FC<StorageListProps> = ({ onClose }) => {
-  const { storageData, settings, updateStorageData } = useStorage();
+  const { storageData, settings, updateStorageData, deleteStorageEntry } = useStorage();
 
   const handleComplete = (record: any) => {
     Modal.confirm({
@@ -95,9 +95,20 @@ const StorageList: React.FC<StorageListProps> = ({ onClose }) => {
       render: (record: any) => (
         <Space>
           {record.status === 'active' && (
-            <Button onClick={() => handleComplete(record)}>
-              Complete & Generate Bill
-            </Button>
+            <>
+              <Button onClick={() => handleComplete(record)}>
+                Complete & Generate Bill
+              </Button>
+              <Button danger onClick={() => {
+                Modal.confirm({
+                  title: 'Delete Storage Entry',
+                  content: 'Are you sure you want to delete this storage entry?',
+                  onOk: () => deleteStorageEntry(record.id)
+                });
+              }}>
+                Delete
+              </Button>
+            </>
           )}
           {record.status === 'completed' && (
             <Button onClick={() => {

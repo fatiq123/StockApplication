@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { CustomerData } from '../types/storage';
 import { useStorage } from '../context/StorageContext';
 import StorageList from './StorageList';
+import StatusTabs from './StatusTabs';
 
 const { Title } = Typography;
 
@@ -75,13 +76,13 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                 <Title level={2}>{type === 'apple' ? 'Apple' : 'Potato'} Storage Registration</Title>
 
                 <Modal
-                    title="Storage Records"
+                    title={`${type.charAt(0).toUpperCase() + type.slice(1)} Storage Records`}
                     open={showRecords}
                     onCancel={() => setShowRecords(false)}
                     width="90%"
                     footer={null}
                 >
-                    <StorageList onClose={() => setShowRecords(false)} />
+                    <StatusTabs type={type} onClose={() => setShowRecords(false)} />
                 </Modal>
 
                 <div style={{ marginBottom: 24, background: '#f5f7fa', padding: 16, borderRadius: 8 }}>
@@ -187,15 +188,17 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                         <InputNumber min={1} style={{ width: '100%' }} />
                     </Form.Item>
 
-                    <Form.Item
-                        name="truckNumber"
-                        label="Truck Number"
-                        rules={[
-                            { required: type === 'apple', message: 'Please input truck number for apple storage!' }
-                        ]}
-                    >
-                        <Input placeholder="Enter truck/container number" />
-                    </Form.Item>
+                    {type === 'apple' && (
+                        <Form.Item
+                            name="truckNumber"
+                            label="Truck Number"
+                            rules={[
+                                { required: true, message: 'Please input truck number for apple storage!' }
+                            ]}
+                        >
+                            <Input placeholder="Enter truck/container number" />
+                        </Form.Item>
+                    )}
 
                     <Form.Item
                         name="startDate"
