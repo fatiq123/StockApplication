@@ -1,0 +1,91 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  background: #f0f2f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  line-height: 1.6;
+}
+
+#root {
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  min-height: 100vh;
+}
+
+.stock-data-container {
+  background: #fff;
+  padding: 24px;
+  min-height: 360px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.controls {
+  margin-bottom: 16px;
+}
+
+.ant-table-wrapper {
+  overflow-x: auto;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Ant Design Overrides */
+.ant-layout {
+  background: #f0f2f5;
+}
+
+.ant-table {
+  background: #ffffff;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.ant-input::placeholder {
+  color: #bfbfbf;
+}
+
+.ant-btn-primary {
+  background: #1890ff !important;
+}
+
+.ant-btn-primary:hover {
+  background: #40a9ff !important;
+}
+
+.stock-data-container .ant-space {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.stock-data-container .controls .ant-space {
+  flex-wrap: wrap;
+  gap: 12px !important;
+}

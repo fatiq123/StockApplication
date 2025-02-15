@@ -1,19 +1,24 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import axios from 'axios'
+import moment from 'moment'
 import { join } from 'path'
+import { fetchStockData } from './stockService'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1200,
+    height: 800,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: true
     }
   })
 
@@ -41,6 +46,18 @@ function createWindow(): void {
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
+
+  // IPC Handler for stock data
+  ipcMain.handle('fetch-stock-data', async (_, args) => {
+    const { symbol, startDate, endDate } = args;
+    try {
+      const data = await fetchStockData(symbol, startDate, endDate);
+      return data;
+    } catch (error) {
+      console.error('Error in IPC handler:', error);
+      throw error;
+    }
+  });
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
