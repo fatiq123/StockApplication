@@ -17,7 +17,8 @@ interface StorageFormProps {
 const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
     const [form] = Form.useForm();
     const [showRecords, setShowRecords] = useState(false);
-    const { settings, addStorageEntry } = useStorage();
+    const [showRateModal, setShowRateModal] = useState(false);
+    const { settings, addStorageEntry, updateSettings } = useStorage();
 
     // Phone number validation: 03XX-XXXXXXX
     const validatePhone = (rule: any, value: string) => {
@@ -65,6 +66,9 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                         <Button onClick={onBack}>Back to Menu</Button>
                     </Space>
                     <Button onClick={() => setShowRecords(true)}>View Records</Button>
+                    <Button icon={<SettingOutlined />} onClick={() => setShowRateModal(true)}>
+                        Set Rate
+                    </Button>
                 </div>
                 <Title level={2}>{type === 'apple' ? 'Apple' : 'Potato'} Storage Registration</Title>
 
@@ -81,7 +85,7 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                 <div style={{ marginBottom: 24, background: '#f5f7fa', padding: 16, borderRadius: 8 }}>
                     <Title level={4}>Billing Rules:</Title>
                     {type === 'apple' ? (
-                        <ul>
+                        <ul style={{ marginLeft: 26, padding: 0 }}>
                             <li>First month: Full payment required regardless of start date</li>
                             <li>Subsequent months:</li>
                             <ul>
@@ -92,7 +96,7 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                             <li>Current rate: PKR {settings.appleRate} per crate per month</li>
                         </ul>
                     ) : (
-                        <ul>
+                        <ul style={{ marginLeft: 26, padding: 0 }}>
                             <li>Fixed period: January to October {dayjs().year()}</li>
                             <li>Full payment required for entire 10-month period</li>
                             <li>Early withdrawal does not affect payment</li>
@@ -100,6 +104,34 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                         </ul>
                     )}
                 </div>
+
+                <Modal
+                    title="Set Storage Rate"
+                    open={showRateModal}
+                    onCancel={() => setShowRateModal(false)}
+                    footer={null}
+                >
+                    <Form
+                        onFinish={(values) => {
+                            updateSettings({
+                                [type === 'apple' ? 'appleRate' : 'potatoRate']: values.rate
+                            });
+                            setShowRateModal(false);
+                        }}
+                    >
+                        <Form.Item
+                            name="rate"
+                            label={`${type === 'apple' ? 'Apple' : 'Potato'} Rate`}
+                            rules={[{ required: true }]}
+                        >
+                            <InputNumber min={1} />
+                        </Form.Item>
+                        <Button type="primary" htmlType="submit">
+                            Save Rate
+                        </Button>
+                    </Form>
+                </Modal>
+
                 <Form
                     form={form}
                     layout="vertical"
@@ -187,7 +219,6 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                         </div>
                     </Form.Item>
                 </Form>
-
             </div>
         </div>
     );
