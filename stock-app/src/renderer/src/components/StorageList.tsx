@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import EditStorageModal from './EditStorageModal';
 import { Table, Button, Modal, InputNumber, message, Form, Radio, Space, Typography } from 'antd';
+import BillPreview from './BillPreview';
 import { useStorage } from '../context/StorageContext';
 import { CustomerData } from '../types/storage';
 import dayjs from 'dayjs';
@@ -24,6 +25,11 @@ const StorageList: React.FC<StorageListProps> = ({ type, onClose, showCompleted 
     visible: false,
     customer: null
   });
+  const [previewModal, setPreviewModal] = useState<{ visible: boolean; customer: CustomerData | null }>({
+    visible: false,
+    customer: null
+  });
+
   const [editModal, setEditModal] = useState<{ visible: boolean; customer: CustomerData | null }>({
     visible: false,
     customer: null
@@ -86,7 +92,9 @@ const StorageList: React.FC<StorageListProps> = ({ type, onClose, showCompleted 
       title: 'Actions',
       render: (record: CustomerData) => (
         <Space>
-          <Button onClick={() => generateBillPDF(record)}>View Bill</Button>
+          <Button onClick={() => {
+            setPreviewModal({ visible: true, customer: record });
+          }}>View Bill</Button>
           {!showCompleted && (
             <>
               <Button
@@ -210,6 +218,17 @@ const StorageList: React.FC<StorageListProps> = ({ type, onClose, showCompleted 
         customer={editModal.customer}
         onCancel={() => setEditModal({ visible: false, customer: null })}
         onUpdate={handleUpdate}
+      />
+      
+      <BillPreview
+        visible={previewModal.visible}
+        customer={previewModal.customer}
+        onClose={() => setPreviewModal({ visible: false, customer: null })}
+        onPrint={() => {
+          if (previewModal.customer) {
+            generateBillPDF(previewModal.customer);
+          }
+        }}
       />
     </>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Space, Typography, Modal, InputNumber, message } from 'antd';
-import appleIcon from '../assets/apple.jpg';
-import potatoIcon from '../assets/potatoes.jpg';
+import appleIcon from '../assets/apple.svg';
+import potatoIcon from '../assets/potato.svg';
 import StorageForm from './StorageForm';
 // import StorageList from './StorageList';
 import { useStorage } from '../context/StorageContext';

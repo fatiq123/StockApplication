@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { validatePotatoDate } from '../utils/billing';
-import { Form, Input, DatePicker, InputNumber, Button, Typography, Modal, Space } from 'antd';
+import { Form, Input, DatePicker, InputNumber, Button, Typography, Modal, Space, message } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { CustomerData } from '../types/storage';
@@ -19,14 +19,25 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
     const [form] = Form.useForm();
     const [showRecords, setShowRecords] = useState(false);
     const [showRateModal, setShowRateModal] = useState(false);
-    const { settings, addStorageEntry, updateSettings } = useStorage();
+    const { settings, addStorageEntry, updateSettings,
+        getActiveCustomerCount,
+        isCustomerLimitReached
+    } = useStorage();
+
+    useEffect(() => {
+        // Check limit when component mounts
+        if (isCustomerLimitReached(type)) {
+            message.warning(`Maximum limit of 10 active customers reached for ${type} storage`);
+        }
+    }, [type]);
 
     // Phone number validation: 03XX-XXXXXXX
     const validatePhone = (rule: any, value: string) => {
         if (!value) {
             return Promise.reject('Please input phone number!');
         }
-        const pattern = /^03\d{2}-\d{7}$/;
+        // const pattern = /^03\d{2}-\d{7}$/;
+        const pattern = /^03\d{2}\d{7}$/;
         if (!pattern.test(value)) {
             return Promise.reject('Phone number must be in format: 03XX-XXXXXXX');
         }
@@ -34,6 +45,12 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
     };
 
     const handleSubmit = (values: any) => {
+
+        if (isCustomerLimitReached(type)) {
+            message.error(`Cannot add new customer. Maximum limit of 10 active customers reached for ${type} storage`);
+            return;
+        }
+
         const customerData: CustomerData = {
             id: Date.now().toString(),
             ...values,
@@ -54,7 +71,8 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
         if (!value) {
             return Promise.reject('Please input CNIC!');
         }
-        const pattern = /^\d{5}-\d{7}-\d{1}$/;
+        // const pattern = /^\d{5}-\d{7}-\d{1}$/;
+        const pattern = /^\d{5}\d{7}\d{1}$/;
         if (!pattern.test(value)) {
             return Promise.reject('CNIC must be in format: 12345-1234567-1');
         }
@@ -74,6 +92,17 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                     </Button>
                 </div>
                 <Title level={2}>{type === 'apple' ? 'Apple' : 'Potato'} Storage Registration</Title>
+
+
+                {/* Customer count display - always visible */}
+                <div style={{ marginBottom: 16, background: '#f0f2f5', padding: 12, borderRadius: 6 }}>
+                    <Typography.Text strong>
+                        Current Active Customers: {getActiveCustomerCount(type)}/10
+                    </Typography.Text>
+                </div>
+
+
+
 
                 <Modal
                     title={`${type.charAt(0).toUpperCase() + type.slice(1)} Storage Records`}
@@ -135,105 +164,128 @@ const StorageForm: React.FC<StorageFormProps> = ({ type, onBack }) => {
                     </Form>
                 </Modal>
 
-                <Form
-                    form={form}
-                    layout="vertical"
-                    onFinish={handleSubmit}
-                >
-                    <Form.Item
-                        name="firstName"
-                        label="First Name"
-                        rules={[{ required: true, message: 'Please input first name!' }]}
-                    >
-                        <Input />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="lastName"
-                        label="Last Name"
-                        rules={[{ required: true, message: 'Please input last name!' }]}
-                    >
-                        <Input />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="cnic"
-                        label="CNIC"
-                        rules={[{ validator: validateCNIC }]}
-                    >
-                        <Input />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="phoneNumber"
-                        label="Phone Number"
-                        rules={[{ validator: validatePhone }]}
-                    >
-                        <Input />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="address"
-                        label="Address"
-                        rules={[{ required: true, message: 'Please input address!' }]}
-                    >
-                        <Input.TextArea />
-                    </Form.Item>
-
-                    <Form.Item
-                        name="quantity"
-                        label={`Quantity (in ${type === 'apple' ? 'crates' : 'sacks'})`}
-                        rules={[{ required: true, message: 'Please input quantity!' }]}
-                    >
-                        <InputNumber min={1} style={{ width: '100%' }} />
-                    </Form.Item>
-
-                    {type === 'apple' && (
-                        <Form.Item
-                            name="truckNumber"
-                            label="Truck Number"
-                            rules={[
-                                { required: true, message: 'Please input truck number for apple storage!' }
-                            ]}
-                        >
-                            <Input placeholder="Enter truck/container number" />
-                        </Form.Item>
-                    )}
-
-                    <Form.Item
-                        name="startDate"
-                        label="Start Date"
-                        rules={[{ required: true, message: 'Please select start date!' }]}
-                    >
-                        <DatePicker
-                            style={{ width: '100%' }}
-                            disabledDate={(current) => {
-                                if (!current) return false;
-                                const today = dayjs().startOf('day');
-                                if (current < today) return true;
-
-                                if (type === 'potato') {
-                                    return !validatePotatoDate(current);
-                                }
-                                return false;
-                            }}
-                        />
-                    </Form.Item>
-
-                    <div style={{ marginBottom: 24 }}>
-                        <Typography.Text strong>
-                            Current Rate: PKR {type === 'apple' ? settings.appleRate : settings.potatoRate} per {type === 'apple' ? 'crate/month' : 'sack for 10 months'}
-                        </Typography.Text>
+                {isCustomerLimitReached(type) ? (
+                    <div style={{
+                        textAlign: 'center',
+                        padding: '40px',
+                        background: '#f5f5f5',
+                        borderRadius: '8px',
+                        marginTop: '20px'
+                    }}>
+                        <Typography.Title level={3}>
+                            Maximum Limit Reached
+                        </Typography.Title>
+                        <Typography.Paragraph>
+                            Cannot add new customers. The maximum limit of 10 active customers has been reached for {type} storage.
+                        </Typography.Paragraph>
+                        <Button type="primary" onClick={() => setShowRecords(true)}>
+                            View Existing Records
+                        </Button>
                     </div>
+                ) : (<>
 
-                    <Form.Item>
-                        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                            <Button type="primary" htmlType="submit">
-                                Submit
-                            </Button>
+
+                    <Form
+                        form={form}
+                        layout="vertical"
+                        onFinish={handleSubmit}
+                    >
+                        <Form.Item
+                            name="firstName"
+                            label="First Name"
+                            rules={[{ required: true, message: 'Please input first name!' }]}
+                        >
+                            <Input />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="lastName"
+                            label="Last Name"
+                            rules={[{ required: true, message: 'Please input last name!' }]}
+                        >
+                            <Input />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="cnic"
+                            label="CNIC"
+                            rules={[{ validator: validateCNIC }]}
+                        >
+                            <Input />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="phoneNumber"
+                            label="Phone Number"
+                            rules={[{ validator: validatePhone }]}
+                        >
+                            <Input />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="address"
+                            label="Address"
+                            rules={[{ required: true, message: 'Please input address!' }]}
+                        >
+                            <Input.TextArea />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="quantity"
+                            label={`Quantity (in ${type === 'apple' ? 'crates' : 'sacks'})`}
+                            rules={[{ required: true, message: 'Please input quantity!' }]}
+                        >
+                            <InputNumber min={1} style={{ width: '100%' }} />
+                        </Form.Item>
+
+                        {type === 'apple' && (
+                            <Form.Item
+                                name="truckNumber"
+                                label="Truck Number"
+                                rules={[
+                                    { required: true, message: 'Please input truck number for apple storage!' }
+                                ]}
+                            >
+                                <Input placeholder="Enter truck/container number" />
+                            </Form.Item>
+                        )}
+
+                        <Form.Item
+                            name="startDate"
+                            label="Start Date"
+                            rules={[{ required: true, message: 'Please select start date!' }]}
+                        >
+                            <DatePicker
+                                style={{ width: '100%' }}
+                                disabledDate={(current) => {
+                                    if (!current) return false;
+                                    const today = dayjs().startOf('day');
+                                    if (current < today) return true;
+
+                                    if (type === 'potato') {
+                                        return !validatePotatoDate(current);
+                                    }
+                                    return false;
+                                }}
+                            />
+                        </Form.Item>
+
+                        <div style={{ marginBottom: 24 }}>
+                            <Typography.Text strong>
+                                Current Rate: PKR {type === 'apple' ? settings.appleRate : settings.potatoRate} per {type === 'apple' ? 'crate/month' : 'sack for 10 months'}
+                            </Typography.Text>
                         </div>
-                    </Form.Item>
-                </Form>
+
+                        <Form.Item>
+                            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                <Button type="primary" htmlType="submit">
+                                    Submit
+                                </Button>
+                            </div>
+                        </Form.Item>
+                    </Form>
+                </>
+                )}
             </div>
         </div>
     );

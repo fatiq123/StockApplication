@@ -11,6 +11,10 @@ interface StorageContextType {
     appleRate: number;
     potatoRate: number;
   };
+
+  getActiveCustomerCount: (type: 'apple' | 'potato') => number;  // Add this
+  isCustomerLimitReached: (type: 'apple' | 'potato') => boolean; // Add this
+
   addStorageEntry: (entry: CustomerData) => void;
   updateSettings: (newSettings: { appleRate?: number; potatoRate?: number }) => void;
   exportToCSV: (type: 'apple' | 'potato') => void;
@@ -190,12 +194,28 @@ export const StorageProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   };
 
+    // Add these new functions
+    const getActiveCustomerCount = (type: 'apple' | 'potato') => {
+      return storageEntries.filter(entry => 
+        entry.type === type && entry.status === 'active'
+      ).length;
+    };
+  
+    const isCustomerLimitReached = (type: 'apple' | 'potato') => {
+      return getActiveCustomerCount(type) >= 10;
+    };
+
+
   return (
     <StorageContext.Provider value={{
       storageEntries,
       completedEntries,
       withdrawalRecords,
       settings,
+
+      getActiveCustomerCount,    // Add this
+      isCustomerLimitReached,    // Add this
+      
       addStorageEntry: (entry) => setStorageEntries(prev => [...prev, entry]),
       updateSettings: (newSettings) => setSettings(prev => ({ ...prev, ...newSettings })),
       exportToCSV,
